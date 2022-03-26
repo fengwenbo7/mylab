@@ -1,6 +1,9 @@
-#include "NetApi/NetSDK/NetClient.h"
+#include "../NetApi/NetSDK/NetClient.hpp"
+#include <string>
 
 int main(){
     NetClient* client=new NetClient();
-    client->CreateSocketPeer("127.0.0.1");
+    char ipstr[]="172.16.116.139";
+    client->CreateSocketPeer(ipstr,strlen(ipstr));
+    return 0;
 }

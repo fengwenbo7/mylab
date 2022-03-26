@@ -1,6 +1,7 @@
-#include "NetApi/NetSDK/NetServer.h"
+#include "../NetApi/NetSDK/NetServer.hpp"
 
 int main(){
-    NetServer* server=new NetServer();
-    server->CreateSocketPeer();
+    NetServer server=NetServer();
+    server.CreateSocketPeer();
+    return 0;
 }
