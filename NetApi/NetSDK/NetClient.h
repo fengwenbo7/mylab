@@ -1,7 +1,7 @@
 #include "NetBase.h"
 
 class NetClient:public NetBase{
-public:
+protected:
     int HandleSocketMessage(int recvret,void *msg) override{
         if(recvret>0){
             printf("server:%s",msg);
@@ -16,5 +16,11 @@ public:
             perror("receive error");
             return -1;
         }
+    }
+public:
+    int CreateSocketPeer(const char* _cp) override{
+        CreateSocket();
+        ConnectSocket(_cp);
+        ReceiveSocketMsg();
     }
 };

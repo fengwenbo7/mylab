@@ -9,6 +9,13 @@
 
 class NetBase{
 public:
+    int virtual CreateSocketPeer(){
+        return 0;
+    }
+    int virtual CreateSocketPeer(const char* _cp){
+        return 0;
+    }
+protected:
     //create socket for server&client
     int virtual CreateSocket(){
         own_fd=socket(AF_INET,SOCK_STREAM,0);

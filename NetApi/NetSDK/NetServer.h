@@ -1,7 +1,7 @@
 #include "NetBase.h"
 
 class NetServer:public NetBase{
-public:
+protected:
     int HandleSocketMessage(int recvret,void *msg) override{
         if(recvret>0){
             char ip[32];
@@ -18,4 +18,12 @@ public:
             return -1;
         }
     }
+public:
+    int CreateSocketPeer() override{
+        CreateSocket();
+        BindSocket();
+        ListenSocket();
+        AcceptSocket();
+        ReceiveSocketMsg();
+    }        
 };
