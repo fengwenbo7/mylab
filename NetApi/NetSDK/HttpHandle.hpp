@@ -32,6 +32,22 @@ enum HTTP_CODE{
 static const char* szret[]={"I get a correct result\n","Something wrong\n"};
 
 //parse line from status mechine
+//checked_index point the word parsing int the buffer
+//read_buffer point to the next word of customer data int the buffer
+//the words from index 0 to index checked_index have been parsed
+//the words from index checked_index to index read_index-1 are going to be parsed by the function blow
 LINE_STATUS parse_line(char* buffer,int& checked_index,int& read_index){
+    char temp;
+    for(;checked_index)<read_index;++checked_index){
+        //current word to be parsed
+        temp=buffer[checked_index];
+        if(temp=='\r'){//read a complete line probably from '\r'
 
+        }
+        else if(temp=='\n'){//read a complete line probably from '\n'
+            
+        }
+        return LINE_BAD;
+    }
+    return LINE_OPEN;//parse all the content but no '\n',which means we need continue to parse
 }
