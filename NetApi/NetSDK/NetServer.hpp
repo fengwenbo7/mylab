@@ -6,6 +6,11 @@ struct NetObject{
     struct sockaddr_in socket_addr;
 };
 
+enum class SocketMsgHandler{
+    ReceiveHandler,
+    SelectHandler,
+};
+
 void* ReceiveSocketMsg(void* arg){
     struct NetObject* netob=(struct NetObject*)arg;
     while(1){
@@ -28,6 +33,40 @@ void* ReceiveSocketMsg(void* arg){
     return NULL;
 }
 
+void* SelectSocketMsg(void* arg){
+    struct NetObject* netob=(struct NetObject*)arg;
+    int ret = 0;
+    char buf[1024];
+    fd_set read_fs;
+    fd_set exception_fs;
+    FD_ZERO(&read_fs);
+    FD_ZERO(&exception_fs);
+
+    while(1){
+        memset(buf,'\0',sizeof(buf));
+        //set communication_fs in read_fs and exception_fs
+        FD_SET(netob->socket_fd,&read_fs);
+        FD_SET(netob->socket_fd,&exception_fs);
+        ret = select(netob->socket_fd+1,&read_fs,NULL,&exception_fs,NULL);
+        if(ret<0){
+            perror("select error\n");
+            break;
+        }
+        //read ready-recv
+        if(FD_ISSET(netob->socket_fd,&read_fs)){
+            ret=recv(netob->socket_fd,buf,sizeof(buf)-1,0);
+            if(ret<=0) break;
+            printf("get %d bytes of normal data:%s",ret,buf);
+        }
+        else if(FD_ISSET(netob->socket_fd,&exception_fs)){
+            ret=recv(netob->socket_fd,buf,sizeof(buf)-1,MSG_OOB);
+            if(ret<=0) break;
+            printf("get %d bytes of oob data:%s",ret,buf);
+        }
+    }
+    return NULL;
+}
+
 class NetServer{
 private:
     const char* greet="hello,i am server.";
@@ -36,6 +75,7 @@ private:
     struct sockaddr_in listen_addr;//server address
     struct sockaddr_in communication_addr;//client address
     std::unordered_map<int,NetObject> clients;
+    friend class HttpHandleUtil;
 private:
      int CreateSocket(){
         listen_fd=socket(AF_INET,SOCK_STREAM,0);
@@ -60,7 +100,7 @@ private:
     }
 
     //accept connect from client in server
-    int AcceptSocket(){
+    int AcceptSocketThread(SocketMsgHandler handler){
         int ret=0;
         while(1){
             bzero(&communication_addr,sizeof(communication_addr));
@@ -74,7 +114,17 @@ private:
                 SendSocketMessage(communication_fd,greet,strlen(greet));
                 //create sub thread
                 pthread_t tid;
-                pthread_create(&tid,NULL,ReceiveSocketMsg,newClinet);
+                switch (handler)
+                {
+                case SocketMsgHandler::SelectHandler :
+                    pthread_create(&tid,NULL,SelectSocketMsg,newClinet);
+                    break;
+                
+                case SocketMsgHandler::ReceiveHandler :
+                default:
+                    pthread_create(&tid,NULL,ReceiveSocketMsg,newClinet);
+                    break;
+                }
                 pthread_detach(tid);//子线程有可能随着连接终止而会终止，但是不能影响主线程的正常运行，因此在这里将主线程与子线程分离
             }
             else{
@@ -97,7 +147,7 @@ private:
 
 public:
     int CreateSocketPeer(){
-        IOFuncUtil::Daemonize();
+        //IOFuncUtil::Daemonize();
         if(CreateSocket()==-1){
             perror("socket error");
             return -1;
@@ -110,7 +160,7 @@ public:
             perror("listen error");
             return -1;
         }
-        if(AcceptSocket()==-1){
+        if(AcceptSocketThread(SocketMsgHandler::SelectHandler)==-1){
             perror("accept error");
             return -1;
         }
