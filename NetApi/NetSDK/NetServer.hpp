@@ -1,5 +1,6 @@
 #include "NetBase.hpp"
 #include "../IOSDK/IOFunc.hpp"
+#include "../IOSDK/epoll_func.hpp"
 
 struct NetObject{
     int socket_fd;
@@ -65,6 +66,16 @@ void* SelectSocketMsg(void* arg){
         }
     }
     return NULL;
+}
+
+void* EPollSoccketMsg(void* arg){
+    struct NetObject* netob=(struct NetObject*)arg;
+    int epfd=epoll_create(5);
+    epoll_event* events=new epoll_event[MAX_EVENT_NUMBER];
+    epoll_ctl(epfd,EPOLL_CTL_ADD,netob->socket_fd,events);
+    while(1){
+        epoll_wait(epfd,events,MAX_EVENT_NUMBER,5000);
+    }
 }
 
 class NetServer{
