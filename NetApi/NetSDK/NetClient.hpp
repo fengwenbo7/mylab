@@ -85,6 +85,7 @@ public:
             perror("connect error");
             return -1;
         }
+        SendSocketMessage(respon,strlen(respon));
         return ReceiveSocketMsg();
     }
 };
