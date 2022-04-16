@@ -41,22 +41,19 @@ int main(){
     fds[0].events=POLLIN;
     while(1){
         int pret=poll(fds,1,5000);
-        if (pret==-1&&errno==EINTR)
-        {
-            continue;
-        }
-        else if(pret==-1){
-            break;
-        }
-        printf("ret:%d\n",pret);
-        if(fds[0].revents&POLLIN){
-            printf("client message in.\n");
-            fds[0].revents=0;
+        if (pret == 0){
+			/* 超时返回 */
+			printf("time out\n");
+		}else if(pret<0){
+			/* 出错返回 */
+		    printf("poll error\n"); 
+		}else{     
+			/* 有数据可读,读取数据 */
+			/* 这里为了简单就不对返回的事件revents，做判断和重置了 */
             char buf[1024];
-            memset(buf,'\0',sizeof(buf));
-            if(read(fds[0].fd,buf,1024)>0){
-                printf("client data:%s",buf);
-            }
-        }
+            memset(buf,'\0',sizeof(buf)-1);
+			read(fds[0].fd, buf, 1);
+			printf("client data = %s\n", buf);
+		}
     }
 }
