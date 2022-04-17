@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <iostream>
+#include <memory.h>
 
 #define MAX_EVENT_NUM 1024
 #define BUFFER_SIZE 1024
@@ -15,11 +16,14 @@ struct fds
     int sock_fd;
 };
 
-void add_fd_into_epoll_fds(int epollfd,int tarfd){
+void add_fd_into_epoll_fds(int epollfd,int tarfd,bool oneshot){
     //add fd to epoll
     epoll_event event;
     event.data.fd=tarfd;
-    event.events=EPOLLIN|EPOLLET|EPOLLONESHOT;
+    event.events=EPOLLIN|EPOLLET;
+    if(oneshot){
+        event.events|=EPOLLONESHOT;
+    }
     epoll_ctl(epollfd,EPOLL_CTL_ADD,tarfd,&event);
     //set non-block
     int old_option=fcntl(tarfd,F_GETFL);
@@ -27,7 +31,47 @@ void add_fd_into_epoll_fds(int epollfd,int tarfd){
     fcntl(tarfd,F_SETFL,new_option);
 }
 
+//epoll events shot only once because we set the oneshot attribute,so we should set again after EAGAIN occurs
+void reset_epolloneshot(int epoll_fd,int conn_fd){
+    epoll_event event;
+    event.data.fd=conn_fd;
+    event.events=EPOLLIN|EPOLLET|EPOLLONESHOT;
+    epoll_ctl(epoll_fd,EPOLL_CTL_MOD,conn_fd,&event);
+}
+
 void* worker(void* arg){
+    fds* fds_=(fds*)arg;
+    int conn_fd=fds_->sock_fd;
+    int epoll_fd=fds_->epoll_fd;
+    pthread_t pid=pthread_self();
+    char buf[BUFFER_SIZE];
+    memset(buf,'\0',BUFFER_SIZE);
+    while(1){
+        int ret=recv(conn_fd,buf,BUFFER_SIZE-1,0);
+        printf("receive ret:%d\n",ret);
+        if(ret==0){//close connection
+            printf("client closed.\n");
+            epoll_ctl(epoll_fd,EPOLL_CTL_DEL,conn_fd,NULL);//remove current socket from epoll
+            close(conn_fd);
+            break;
+        }
+        else if(ret<0){
+            if(errno==EAGAIN){//can register again,not internet error
+                printf("read later.\n");
+                reset_epolloneshot(epoll_fd,conn_fd);
+                break;
+            }
+            else{//error occurs
+                perror("recv error\n");
+                break;
+            }
+        }
+        else{
+            printf("[thread:%d] get messgae:%s\n",(int)pid,buf);
+            sleep(5);//data handle
+        }
+    }
+    printf("end thread receiving data on fd:%d",conn_fd);
     return NULL;
 }
 
@@ -61,7 +105,7 @@ int main(){
         return -1;
     }
 
-    add_fd_into_epoll_fds(epoll_fd,listen_fd);
+    add_fd_into_epoll_fds(epoll_fd,listen_fd,false);
 
     while(1){
         ret=epoll_wait(epoll_fd,events,MAX_EVENT_NUM,-1);
@@ -75,14 +119,16 @@ int main(){
                 struct sockaddr_in client_addr;
                 socklen_t len=sizeof(client_addr);
                 int conn_fd=accept(listen_fd,(sockaddr*)&client_addr,&len);
-                add_fd_into_epoll_fds(epoll_fd,sock_fd);
+                add_fd_into_epoll_fds(epoll_fd,conn_fd,true);
+                printf("client connect\n");
             }
             else if(events[i].events&EPOLLIN){
+                printf("epoll in occurs\n");
                 pthread_t thread;
                 fds fd_new_thread;
                 fd_new_thread.epoll_fd=epoll_fd;
                 fd_new_thread.sock_fd=sock_fd;
-                pthread_create(&thread,NULL,worker,&fd_new_thread);
+                pthread_create(&thread,NULL,worker,(void*)&fd_new_thread);
             }
             else{
                 printf("something else happened\n");

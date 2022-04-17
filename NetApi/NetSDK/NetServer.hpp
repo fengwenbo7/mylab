@@ -18,6 +18,7 @@ void* ReceiveSocketMsg(void* arg){
         char msg[1024];
         memset(msg,'\0',1024);
         int msgret=recv(netob->socket_fd,msg,sizeof(msg)-1,0);
+        printf("receive ret:%d\n",msgret);
         if(msgret>0){
             char ip[32];
             printf("client[%s:%d]:%s\n",inet_ntoa(netob->socket_addr.sin_addr),ntohs(netob->socket_addr.sin_port),(char*)msg);
@@ -171,7 +172,7 @@ public:
             perror("listen error");
             return -1;
         }
-        if(AcceptSocketThread(SocketMsgHandler::SelectHandler)==-1){
+        if(AcceptSocketThread(SocketMsgHandler::ReceiveHandler)==-1){
             perror("accept error");
             return -1;
         }

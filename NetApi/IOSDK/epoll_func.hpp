@@ -5,7 +5,6 @@
 #include <pthread.h>
 
 #define MAX_EVENT_NUMBER 1024
-#define BUFFER_SIZE 10
 class EpollFunc{
 public:
 //set no-block
