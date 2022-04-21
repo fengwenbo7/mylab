@@ -16,6 +16,12 @@
 #define BUFFER_SIZE 64
 #define FD_LIMIT 65535
 
+struct client_data{
+    sockaddr_in address;
+    char* write_buf;
+    char read_buf[BUFFER_SIZE];
+};
+
 void setnonblock(int fd){
     int old_option=fcntl(fd,F_GETFL);
     int new_option=old_option|O_NONBLOCK;
@@ -43,6 +49,8 @@ int main(){
         perror("listen error.\n");
         return -1;
     }
+
+    client_data* users=new client_data[FD_LIMIT];//for each connection
     pollfd fds[MAX_CLINET+1];
     int user_count=0;
     fds[0].fd=listen_fd;
@@ -81,11 +89,13 @@ int main(){
                 fds[user_count].fd=conn_fd;
                 fds[user_count].events=POLLIN|POLLHUP|POLLERR;
                 fds[user_count].revents=0;
+                users[conn_fd].address=client_addr;
                 setnonblock(conn_fd);
                 printf("new client connects.now users num:%d\n",user_count);
             }
             else if(fds[i].events&POLLERR){
                 printf("fd:%d error happened.\n",fds[i].fd);
+                continue;
             }
             else if(fds[i].events&POLLHUP){
                 printf("fd:%d disconnected.\n");
@@ -95,9 +105,8 @@ int main(){
                 user_count--;
             }
             else if(fds[i].events&POLLIN){
-                char buf[BUFFER_SIZE];
-                ret=recv(fds[i].fd,buf,BUFFER_SIZE,0);
-                printf("get %d length message:%s from fd:%d",ret,buf,fds[i].fd);
+                ret=recv(fds[i].fd,users[fds[i].fd].read_buf,BUFFER_SIZE-1,0);
+                printf("get %d length message:%s from fd:%d",ret,users[fds[i].fd],fds[i].fd);
                 if(ret<0){
                     if(errno!=EAGAIN){
                         printf("fd:%d error.so we disconnect it.\n",fds[i].fd);
@@ -107,11 +116,31 @@ int main(){
                         user_count--;
                     }
                 }
+                else if(ret>0){
+                    //notify other clients to write if receive message
+                    for(int j=0;j<user_count;j++){
+                        if(fds[j].fd==fds[i].fd){
+                            continue;
+                        }
+                        fds[j].events|=~POLLIN;
+                        fds[j].events|=POLLOUT;
+                        users[fds[j].fd].write_buf=users[fds[i].fd].read_buf;
+                    }
+                }
             }
             else if(fds[i].events&POLLOUT){
-
+                  if(!users[fds[i].fd].write_buf){
+                      continue;
+                  }
+                  ret=send(fds[i].fd,users[fds[i].fd].write_buf,strlen(users[fds[i].fd].write_buf),0);
+                  users[fds[i].fd].write_buf=NULL;
+                  //update read ready
+                  fds[i].events|=~POLLOUT;
+                  fds[i].events|=POLLIN;
             }
         }
     }
+    delete[] users;
+    close(listen_fd);
     return 0;
 }
