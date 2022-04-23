@@ -11,7 +11,6 @@
 #include <poll.h>
 
 #define MAX_EVENT_NUM 1024
-#define BUFFER_SIZE 1024
 #define MAX_CLINET 5
 #define BUFFER_SIZE 64
 #define FD_LIMIT 65535
@@ -98,7 +97,7 @@ int main(){
                 continue;
             }
             else if(fds[i].events&POLLHUP){
-                printf("fd:%d disconnected.\n");
+                printf("fd:%d disconnected.\n",fds[i].fd);
                 close(fds[i].fd);
                 fds[i]=fds[user_count];
                 i--;
@@ -106,7 +105,7 @@ int main(){
             }
             else if(fds[i].events&POLLIN){
                 ret=recv(fds[i].fd,users[fds[i].fd].read_buf,BUFFER_SIZE-1,0);
-                printf("get %d length message:%s from fd:%d",ret,users[fds[i].fd],fds[i].fd);
+                printf("get %d length message:%s from fd:%d\n",ret,users[fds[i].fd].read_buf,fds[i].fd);
                 if(ret<0){
                     if(errno!=EAGAIN){
                         printf("fd:%d error.so we disconnect it.\n",fds[i].fd);
