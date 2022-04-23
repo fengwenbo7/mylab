@@ -10,7 +10,6 @@
 #include <fcntl.h>
 #include <poll.h>
 
-#define MAX_EVENT_NUM 1024
 #define MAX_CLINET 5
 #define BUFFER_SIZE 64
 #define FD_LIMIT 65535
@@ -51,23 +50,26 @@ int main(){
 
     client_data* users=new client_data[FD_LIMIT];//for each connection
     pollfd fds[MAX_CLINET+1];
-    int user_count=0;
+    int user_count=0;//for pollfd
+    //listen fd
     fds[0].fd=listen_fd;
     fds[0].events=POLLIN|POLLERR;
     fds[0].revents=0;
+    //client fd
     for(int i=1;i<=MAX_CLINET;i++){
-        fds[i].fd=0;
+        fds[i].fd=-1;
         fds[i].revents=0;
     }
     while (1)
     {
-        int poll_ret=poll(fds,MAX_CLINET,5000);
+        int poll_ret=poll(fds,user_count+1,-1);
         if(poll_ret<0){
             perror("poll error.\n");
             break;
         }
-        for(int i=0;i<MAX_CLINET;i++){
-            if(fds[i].fd==listen_fd&&(fds[i].events&POLLIN)){
+        for(int i=0;i<user_count+1;i++){
+            if(fds[i].fd==listen_fd&&(fds[i].revents&POLLIN)){
+                //new client connect,i==0
                 struct sockaddr_in client_addr;
                 socklen_t len=sizeof(client_addr);
                 bzero(&client_addr,len);
@@ -85,31 +87,39 @@ int main(){
                 }
                 //new client
                 user_count++;
-                fds[user_count].fd=conn_fd;
-                fds[user_count].events=POLLIN|POLLHUP|POLLERR;
-                fds[user_count].revents=0;
                 users[conn_fd].address=client_addr;
                 setnonblock(conn_fd);
+                fds[user_count].fd=conn_fd;
+                fds[user_count].events=POLLIN|POLLRDHUP|POLLERR;
+                fds[user_count].revents=0;
                 printf("new client connects.now users num:%d\n",user_count);
             }
-            else if(fds[i].events&POLLERR){
+            else if(fds[i].revents&POLLERR){
                 printf("fd:%d error happened.\n",fds[i].fd);
+                char errors[100];
+                memset(errors,'\0',100);
+                socklen_t len=sizeof(errors);
+                if(getsockopt(fds[i].fd,SOL_SOCKET,SO_ERROR,&errors,&len)<0){
+                    printf("get socket option failed.\n");
+                }
                 continue;
             }
-            else if(fds[i].events&POLLHUP){
-                printf("fd:%d disconnected.\n",fds[i].fd);
-                close(fds[i].fd);
-                fds[i]=fds[user_count];
+            else if(fds[i].revents&POLLRDHUP){
+                users[fds[i].fd]=users[fds[user_count].fd];//remove the record
+                close(fds[i].fd);//close connection
+                fds[i]=fds[user_count];//remove the pollfd
                 i--;
                 user_count--;
+                printf("client disconnected.\n");
             }
-            else if(fds[i].events&POLLIN){
-                ret=recv(fds[i].fd,users[fds[i].fd].read_buf,BUFFER_SIZE-1,0);
-                printf("get %d length message:%s from fd:%d\n",ret,users[fds[i].fd].read_buf,fds[i].fd);
+            else if(fds[i].revents&POLLIN){
+                int conn_fd=fds[i].fd;
+                ret=recv(conn_fd,users[conn_fd].read_buf,BUFFER_SIZE-1,0);
                 if(ret<0){
                     if(errno!=EAGAIN){
-                        printf("fd:%d error.so we disconnect it.\n",fds[i].fd);
-                        close(fds[i].fd);
+                        printf("fd:%d error.so we disconnect it.\n",conn_fd);
+                        close(conn_fd);
+                        users[conn_fd]=users[fds[user_count].fd];//remove the record
                         fds[i]=fds[user_count];
                         i--;
                         user_count--;
@@ -117,22 +127,24 @@ int main(){
                 }
                 else if(ret>0){
                     //notify other clients to write if receive message
-                    for(int j=0;j<user_count;j++){
-                        if(fds[j].fd==fds[i].fd){
+                    printf("get %d length message:%s from fd:%d\n",ret,users[conn_fd].read_buf,conn_fd);
+                    for(int j=1;j<=user_count;j++){
+                        if(fds[j].fd==conn_fd){
                             continue;
                         }
                         fds[j].events|=~POLLIN;
                         fds[j].events|=POLLOUT;
-                        users[fds[j].fd].write_buf=users[fds[i].fd].read_buf;
+                        users[fds[j].fd].write_buf=users[conn_fd].read_buf;
                     }
                 }
             }
-            else if(fds[i].events&POLLOUT){
-                  if(!users[fds[i].fd].write_buf){
+            else if(fds[i].revents&POLLOUT){
+                  int conn_fd=fds[i].fd;
+                  if(!users[conn_fd].write_buf){
                       continue;
                   }
-                  ret=send(fds[i].fd,users[fds[i].fd].write_buf,strlen(users[fds[i].fd].write_buf),0);
-                  users[fds[i].fd].write_buf=NULL;
+                  ret=send(conn_fd,users[conn_fd].write_buf,strlen(users[conn_fd].write_buf),0);
+                  users[conn_fd].write_buf=NULL;
                   //update read ready
                   fds[i].events|=~POLLOUT;
                   fds[i].events|=POLLIN;
