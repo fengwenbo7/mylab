@@ -14,6 +14,8 @@
 #include <pthread.h>
 
 #define MAX_EVENT_NUM 1024
+#define __USE_POSIX199309
+#define __USE_XOPEN_EXTENDED
 
 static int pipefd[2];
 
@@ -22,12 +24,32 @@ void addfd(int epoll_fd,int targetfd){
     event.data.fd=targetfd;
     event.events=EPOLLIN|EPOLLET;
     epoll_ctl(epoll_fd,EPOLL_CTL_ADD,targetfd,&event);
+    setnonblocking(targetfd);
 }
 
 void setnonblocking(int fd){
     int old_option=fcntl(fd,F_GETFL);
     int new_option=old_option|O_NONBLOCK;
     fcntl(fd,F_SETFL,new_option);
+}
+
+void sig_handler(int sig){
+    //save primary errno,retain it in the end to ensure the reentered
+    int save_errno=errno;
+    int msg=sig;
+    send(pipefd[1],&msg,1,0);//write the signal to pipe to notify the main loop.
+    errno=save_errno;
+}
+
+void addsig(int sig){
+    struct sigaction sa;
+    memset(&sa,'\0',sizeof(sa));
+    sa.sa_flags|=SA_RESTART;
+    //sa.__sigaction_handler.sa_handler=sig_handler;
+    int ret=sigaction(sig,&sa,NULL);
+    if(ret==-1){
+        perror("sigaction error.");
+    }
 }
 
 int main(){
@@ -66,8 +88,14 @@ int main(){
         perror("socketpair error.");
         return -1;
     }
-    setnonblocking(pipefd[1]);//input(write)
-    addfd(epoll_fd,pipefd[0]);//output(read)
+    setnonblocking(pipefd[1]);//input(write),for signal
+    addfd(epoll_fd,pipefd[0]);//output(read),for epoll
+
+    //set handler for signals
+    addsig(SIGHUP);
+    addsig(SIGCHLD);
+    addsig(SIGTERM);
+    addsig(SIGINT);
 
     bool stop_server=false;
     while(!stop_server){
@@ -87,7 +115,37 @@ int main(){
             }
             else if(sockfd==pipefd[0]&&events[i].events&EPOLLIN){
                 //receive signals,so we should handle that
+                int sig;
+                char signals[1024];
+                ret=recv(sockfd,signals,sizeof(signals),0);
+                if(ret==-1||ret==0){
+                    continue;
+                }
+                else{
+                    //receive signal per byte
+                    for(int i=0;i<ret;i++){
+                        switch (signals[i])
+                        {
+                        case SIGCHLD:
+                        case SIGHUP:{
+                            continue;
+                        }
+                        case SIGTERM:
+                        case SIGINT:{
+                            stop_server=true;
+                        }
+                        default:
+                            break;
+                        }
+                    }
+                }
             }
         }
     }
+
+    printf("close fds\n");
+    close(listen_fd);
+    close(pipefd[0]);
+    close(pipefd[1]);
+    retrun 0;
 }
