@@ -9,7 +9,7 @@
 class util_timer;
 
 struct client_data{
-    sockaddr address;
+    sockaddr_in address;
     int sockfd;
     char buf[BUFFER_SIZE];
     util_timer* timer;
