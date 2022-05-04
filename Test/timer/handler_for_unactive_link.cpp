@@ -1,5 +1,3 @@
-#include "ascend_order_list_timer.h"
-#include "../high_performance/time_wheel.h"
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -14,6 +12,7 @@
 #include <stdlib.h>
 #include <sys/epoll.h>
 #include <pthread.h>
+#include "timer_container/timer_linklist.h"
 
 #define __USE_POSIX199309
 #define FD_LIMIT 65535
@@ -22,7 +21,6 @@
 int pipefd[2];
 //use ascend-order-list to manage timers
 static sort_timer_list timer_list;
-static timer_wheel timer_wheel_;
 static int epoll_fd=0;
 
 void addfdtoepoll(int epoll_fd,int tar_fd){

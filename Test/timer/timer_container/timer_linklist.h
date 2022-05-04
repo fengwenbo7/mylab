@@ -3,6 +3,7 @@
 
 #include <time.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <iostream>
 #define BUFFER_SIZE 64
 

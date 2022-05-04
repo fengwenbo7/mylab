@@ -30,6 +30,7 @@ public:
 
 class timer_heap{
 public:
+    //construct in one case that creates a stack with cap capacity
     timer_heap(int cap):capacity(cap),cur_size(0){
         timer_array=new heap_timer*[capacity];
         if(!timer_array){
@@ -40,8 +41,22 @@ public:
         }
     }
 
+    //construct from existed array
     timer_heap(heap_timer** init_array,int size,int capacity) throw (std::exception):cur_size(size),capacity(capacity){
-        
+        if(capacity<size) throw std::exception();
+        timer_array=new heap_timer*[capacity];
+        if(!timer_array) throw std::exception();
+        for(int i=0;i<capacity;i++){
+            timer_array[i]=NULL;
+        }
+        if(size!=0){
+            for(int i=0;i<size;i++){
+                timer_array[i]=init_array[i];
+            }
+            for(int i=0;i<(size-1)/2;i++){
+                percolate_down(i);
+            }
+        }
     }
 
     ~timer_heap(){
