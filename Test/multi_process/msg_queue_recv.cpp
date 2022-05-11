@@ -16,7 +16,7 @@ struct msg_st{
 void receive_msg(){
     int msgid=-1;
     struct msg_st data;
-    long msg_type=0;//attention!
+    long msg_type=0;//attention!get first message in the queue
     //create msg queue
     msgid=msgget((key_t)1234,0666|IPC_CREAT);
     if(msgid==-1){
