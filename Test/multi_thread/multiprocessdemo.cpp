@@ -18,9 +18,16 @@ int g_count_=0;
 void* custom_handle(void* arg){
     while(1){
         pthread_mutex_lock(&mutex_);
-        pthread_cond_wait(&cond_,&mutex_);
+        while(g_count_==0){
+            printf("cosume is %lu,produce count is 0\n",pthread_self());
+            pthread_cond_wait(&cond_,&mutex_);
+        }
+        printf("cosume is %lu,g_counter is %d\n",pthread_self(),g_count_);
+        g_count_--;
         pthread_mutex_unlock(&mutex_);
+        sleep(1);
     }
+    pthread_exit(NULL);
 }
 
 //product thread
@@ -28,14 +35,19 @@ void* product_handle(void* arg){
     while(1){
         pthread_mutex_lock(&mutex_);
         if(g_count_>=10){
-            printf("too many products,wait...");
+            printf("too many products,wait...\n");
             pthread_mutex_unlock(&mutex_);
             sleep(10);
             continue;
         }
+        printf("start produce the product\n");
+        g_count_++;
+        printf("product is %lu,produce count is %d\n",pthread_self(), g_count_);
         pthread_cond_signal(&cond_);
         pthread_mutex_unlock(&mutex_);
+        sleep(1);
     }
+    pthread_exit(NULL);
 }
 
 int main(){
