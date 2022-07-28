@@ -122,6 +122,7 @@ private:
                 struct NetObject* newClinet;
                 newClinet->socket_fd=communication_fd;
                 newClinet->socket_addr=communication_addr;
+
                 clients.insert(std::make_pair(communication_fd,*newClinet));
                 SendSocketMessage(communication_fd,greet,strlen(greet));
                 //create sub thread
