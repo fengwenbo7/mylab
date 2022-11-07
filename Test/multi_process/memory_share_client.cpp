@@ -52,7 +52,10 @@ int main(){
     ret=pipe(std_pipefd);
     assert(ret!=-1);
     addepollfd(epoll_fd,STDIN_FILENO);
-
+    printf("client connect success.you can type OPRATION to call the related service\n");
+    printf("1.FILE_LIST\n");
+    printf("2.FILE_LOAD_[the name of file]\n");
+    printf("3.(just message)\n");
     char buf[BUFFER_SIZE];
     while(true){
         ret=epoll_wait(epoll_fd,events,MAX_EVENT_NUM,-1);

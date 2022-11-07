@@ -1,7 +1,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/epoll.h>
-#include <pthread.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <iostream>
@@ -39,10 +38,9 @@ void reset_epolloneshot(int epoll_fd,int conn_fd){
     epoll_ctl(epoll_fd,EPOLL_CTL_MOD,conn_fd,&event);
 }
 
-void* worker(void* arg){
-    fds* fds_=(fds*)arg;
-    int conn_fd=fds_->sock_fd;
-    int epoll_fd=fds_->epoll_fd;
+void* worker(fds* fds){
+    int conn_fd=fds->sock_fd;
+    int epoll_fd=fds->epoll_fd;
     pthread_t pid=pthread_self();
     char buf[BUFFER_SIZE];
     memset(buf,'\0',BUFFER_SIZE);
@@ -124,11 +122,15 @@ int main(){
             }
             else if(events[i].events&EPOLLIN){
                 printf("epoll in occurs\n");
-                pthread_t thread;
-                fds fd_new_thread;
-                fd_new_thread.epoll_fd=epoll_fd;
-                fd_new_thread.sock_fd=sock_fd;
-                pthread_create(&thread,NULL,worker,(void*)&fd_new_thread);
+                fds fd_new_process;
+                fd_new_process.epoll_fd=epoll_fd;
+                fd_new_process.sock_fd=sock_fd;
+                int pid=fork();
+                if(pid==0){
+                    //child process
+                    close(listen_fd);
+                    worker(&fd_new_process);
+                }
             }
             else{
                 printf("something else happened\n");

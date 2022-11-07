@@ -36,6 +36,16 @@ typedef struct{
 
     uint32_t dwMaxItems;
     double dProbFalse;
+    uint32_t dwFilterBits;
+    uint32_t dwHashFuncs;
+
+    uint32_t dwResv[6];
+    uint32_t dwFileCrc;
+    uint32_t dwFileterSize;
 }BloomFileHead;
+
+#pragma pack()
+
+static inline void calcBloomFilterParam(uint32_t)
 
 #endif
