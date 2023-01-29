@@ -8,7 +8,13 @@ struct PersonInfo
     uint gender;
     char phonenumber[20];
     char email[128];
-    char resume[128];
+};
+
+struct PersonInfoWithResume
+{
+    PersonInfo person_info;
+    uint resume_length;
+    char *resume;
 };
 
 #endif

@@ -127,13 +127,13 @@ int main()
         std::cout << "input function:" << std::endl;
         std::cout << "1.new" << std::endl;
         std::cout << "2.search" << std::endl;
-        std::cout << "3.show all" << std::endl;
         int func_type;
         std::cin >> func_type;
         switch (func_type)
         {
         case 1:
         {
+            PersonInfoWithResume full_info;
             PersonInfo info;
             std::cout << "name:";
             std::cin >> info.name;
@@ -146,8 +146,14 @@ int main()
             std::cout << "email:";
             std::cin >> info.email;
             std::cout << "resume:";
-            std::cin >> info.resume;
-            cm.SaveData(info);
+            char resume_tmp[128];
+            std::cin >> resume_tmp;
+            full_info.resume = resume_tmp;
+            std::cout << "save to dat" << std::endl;
+            full_info.person_info = info;
+            full_info.resume_length = sizeof(full_info.resume);
+            std::cout << "save to dat" << std::endl;
+            cm.SaveData(full_info);
         }
         break;
         case 2:
@@ -164,22 +170,14 @@ int main()
             string in_email;
             std::cin >> in_email;
 
-            list<PersonInfo> results = cm.SearchFromDat(in_name.c_str(), in_phonenum.c_str(), in_email.c_str());
+            list<PersonInfoWithResume> results = cm.SearchFromDat(in_name.c_str(), in_phonenum.c_str(), in_email.c_str());
             for (auto iter = results.begin(); iter != results.end(); iter++)
             {
-                std::cout << "name:" << iter->name << " "
-                          << "age:" << iter->age << " "
-                          << "phonenumber" << iter->phonenumber << " "
-                          << "email" << iter->email << std::endl;
+                std::cout << "name:" << iter->person_info.name << " "
+                          << "age:" << iter->person_info.age << " "
+                          << "phonenumber" << iter->person_info.phonenumber << " "
+                          << "email" << iter->person_info.email << std::endl;
             }
-        }
-        break;
-        case 3:
-        {
-            PersonInfo *data;
-            size_t data_len_ = cm.ReadFromDat(data);
-            int index = 0;
-            std::cout << "read from dat:" << data_len_ << std::endl;
         }
         break;
         default:

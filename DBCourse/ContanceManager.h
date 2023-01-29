@@ -26,7 +26,7 @@ public:
     {
     }
 
-    void SaveData(PersonInfo info)
+    void SaveData(PersonInfoWithResume info)
     {
         // save origin data
         fstream dat_file_s(dat_file_path_, ios::in | ios::out | ios::binary);
@@ -36,8 +36,17 @@ public:
             return;
         }
         dat_file_s.seekp(file_off_, ios::beg);
-        dat_file_s.write((char *)&info, sizeof(PersonInfo));
-        file_off_ = file_off_ + sizeof(PersonInfo);
+        std::cout << (char *)info.person_info.name << "," << sizeof(info.person_info.name) << std::endl;
+        dat_file_s.write((char *)info.person_info.name, sizeof(info.person_info.name));
+        std::cout << "1" << std::endl;
+        dat_file_s.write(std::to_string(info.person_info.age).c_str(), sizeof(info.person_info.age));
+        std::cout << "2" << std::endl;
+        dat_file_s.write(std::to_string(info.person_info.gender).c_str(), sizeof(info.person_info.gender));
+        dat_file_s.write((char *)info.person_info.phonenumber, sizeof(info.person_info.phonenumber));
+        dat_file_s.write((char *)info.person_info.email, sizeof(info.person_info.email));
+        dat_file_s.write(std::to_string(info.resume_length).c_str(), sizeof(info.resume_length));
+        dat_file_s.write((char *)info.resume, sizeof(info.resume));
+        file_off_ = file_off_ + sizeof(info.person_info) + sizeof(info.resume_length) + info.resume_length;
         data_size_++;
         std::cout << "save data to dat success,file_off:" << file_off_ << ",data_size:" << data_size_ << std::endl;
         dat_file_s.close();
@@ -45,30 +54,9 @@ public:
         // save bplus tree
     }
 
-    size_t ReadFromDat(PersonInfo *data)
+    list<PersonInfoWithResume> SearchFromDat(const char *name, const char *phonenum, const char *email)
     {
-        fstream dat_file_s(dat_file_path_, ios::in | ios::out | ios::binary);
-        if (!dat_file_s)
-        {
-            std::cout << "fopen error:" << dat_file_path_ << std::endl;
-            return 0;
-        }
-        dat_file_s.seekg(0, ios::beg);
-        PersonInfo p1[data_size_];
-        dat_file_s.read((char *)p1, sizeof(PersonInfo) * data_size_);
-        for (size_t i = 0; i < data_size_; i++)
-        {
-            std::cout << i << " name:" << p1[i].name << std::endl;
-        }
-
-        dat_file_s.close();
-        std::cout << "fclose ok." << std::endl;
-        return data_size_;
-    }
-
-    list<PersonInfo> SearchFromDat(const char *name, const char *phonenum, const char *email)
-    {
-        list<PersonInfo> ret;
+        list<PersonInfoWithResume> ret;
         fstream dat_file_s(dat_file_path_, ios::in | ios::out | ios::binary);
         if (!dat_file_s)
         {
@@ -76,8 +64,8 @@ public:
             return ret;
         }
         dat_file_s.seekg(0, ios::beg);
-        PersonInfo p1[data_size_];
-        dat_file_s.read((char *)p1, sizeof(PersonInfo) * data_size_);
+        PersonInfoWithResume p1[data_size_];
+        dat_file_s.read((char *)p1, sizeof(PersonInfoWithResume) * data_size_);
         string input_name(name);
         string input_phonenum(phonenum);
         string input_email(email);
@@ -86,9 +74,9 @@ public:
         transform(input_email.begin(), input_email.end(), input_email.begin(), ::tolower);
         for (size_t i = 0; i < data_size_; i++)
         {
-            string tmp_name(p1[i].name);
-            string tmp_phonenum(p1[i].phonenumber);
-            string tmp_email(p1[i].email);
+            string tmp_name(p1[i].person_info.name);
+            string tmp_phonenum(p1[i].person_info.phonenumber);
+            string tmp_email(p1[i].person_info.email);
             transform(tmp_name.begin(), tmp_name.end(), tmp_name.begin(), ::tolower);
             transform(tmp_phonenum.begin(), tmp_phonenum.end(), tmp_phonenum.begin(), ::tolower);
             transform(tmp_email.begin(), tmp_email.end(), tmp_email.begin(), ::tolower);
