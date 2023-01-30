@@ -121,7 +121,7 @@ int _main()
 
 int main()
 {
-    ContactManager cm("ContactDat.dat");
+    ContactManager cm("ContactDat.dat", "ResumeDat.dat");
     while (true)
     {
         std::cout << "input function:" << std::endl;
@@ -149,9 +149,10 @@ int main()
             char resume_tmp[128];
             std::cin >> resume_tmp;
             full_info.resume = resume_tmp;
+            full_info.resume += '\0';
             std::cout << "save to dat" << std::endl;
             full_info.person_info = info;
-            full_info.resume_length = sizeof(full_info.resume);
+            info.resume_length = sizeof(full_info.resume);
             std::cout << "save to dat" << std::endl;
             cm.SaveData(full_info);
         }
@@ -170,13 +171,14 @@ int main()
             string in_email;
             std::cin >> in_email;
 
-            list<PersonInfoWithResume> results = cm.SearchFromDat(in_name.c_str(), in_phonenum.c_str(), in_email.c_str());
+            list<PersonInfoWithResume> results = cm.SearchFromDat(in_name.c_str(), in_phonenum.c_str(), in_email.c_str(), true);
             for (auto iter = results.begin(); iter != results.end(); iter++)
             {
                 std::cout << "name:" << iter->person_info.name << " "
                           << "age:" << iter->person_info.age << " "
-                          << "phonenumber" << iter->person_info.phonenumber << " "
-                          << "email" << iter->person_info.email << std::endl;
+                          << "phonenumber:" << iter->person_info.phonenumber << " "
+                          << "email:" << iter->person_info.email << " "
+                          << "resume:" << iter->resume << std::endl;
             }
         }
         break;
