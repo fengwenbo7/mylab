@@ -146,14 +146,11 @@ int main()
             std::cout << "email:";
             std::cin >> info.email;
             std::cout << "resume:";
-            char resume_tmp[128];
-            std::cin >> resume_tmp;
-            full_info.resume = resume_tmp;
-            full_info.resume += '\0';
+            std::cin >> full_info.resume;
             std::cout << "save to dat" << std::endl;
             full_info.person_info = info;
-            info.resume_length = sizeof(full_info.resume);
-            std::cout << "save to dat" << std::endl;
+            info.resume_length = strlen(full_info.resume);
+            std::cout << "save to dat,resume size:" << info.resume_length << std::endl;
             cm.SaveData(full_info);
         }
         break;

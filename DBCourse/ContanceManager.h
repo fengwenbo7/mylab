@@ -52,8 +52,7 @@ public:
         }
 
         memcpy(info.person_info.resume_file_name, resume_file_path_.c_str(), sizeof(resume_file_path_));
-        // info.person_info.resume_file_name = (char *)resume_file_path_.c_str();
-        info.person_info.resume_length = sizeof(info.resume);
+        info.person_info.resume_length = strlen(info.resume);
         info.person_info.resume_start = resume_file_off_;
 
         dat_file_s.seekp(file_off_, ios::beg);
@@ -63,8 +62,9 @@ public:
         dat_file_s.close();
         std::cout << (char *)info.person_info.name << "," << sizeof(info.person_info.name) << std::endl;
 
-        resume_file_s.write((char *)info.resume, sizeof(info.resume));
-        resume_file_off_ += sizeof(info.resume);
+        resume_file_s.seekp(resume_file_off_, ios::beg);
+        resume_file_s.write((char *)info.resume, strlen(info.resume));
+        resume_file_off_ += strlen(info.resume);
         resume_file_s.close();
         std::cout << "save data to dat success,file_off:" << file_off_ << ",data_size:" << data_size_ << std::endl;
 
@@ -117,7 +117,9 @@ public:
                 if (resume_file_s)
                 {
                     resume_file_s.seekg(p_info[i].resume_start, ios::beg);
+                    std::cout << "start read." << std::endl;
                     resume_file_s.read((char *)p_full[i].resume, p_info[i].resume_length);
+                    std::cout << "end read." << p_full[i].resume << std::endl;
                     resume_file_s.close();
                 }
                 else

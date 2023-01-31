@@ -16,7 +16,7 @@ struct PersonInfo
 struct PersonInfoWithResume
 {
     PersonInfo person_info;
-    char *resume;
+    char resume[128];
 };
 
 #endif
