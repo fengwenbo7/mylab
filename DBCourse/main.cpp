@@ -121,11 +121,11 @@ void *worker(fds *fds)
                     memcpy(info.name, query_str[1].c_str(), sizeof(query_str[1].c_str()));
                     memcpy(info.phonenumber, query_str[4].c_str(), sizeof(query_str[4].c_str()));
                     memcpy(info.email, query_str[5].c_str(), sizeof(query_str[5].c_str()));
-                    memcpy(full_info.resume, query_str[6].c_str(), sizeof(query_str[6].c_str()));
+                    memcpy(full_info.resume, query_str[6].c_str(), strlen(query_str[6].c_str()));
                     info.age = atoi(query_str[2].c_str());
                     info.gender = atoi(query_str[3].c_str());
                     full_info.person_info = info;
-                    info.resume_length = strlen(full_info.resume);
+                    info.resume_length = strlen(query_str[6].c_str());
                     std::cout << "save to dat,resume size:" << info.resume_length << std::endl;
                     cm->SaveData(full_info);
                     const char *msg_to_send = "new ok.";
@@ -149,6 +149,11 @@ void *worker(fds *fds)
                         const char *msg_to_send = "search ok.";
                         send(conn_fd, msg_to_send, strlen(msg_to_send), 0);
                     }
+                }
+                else
+                {
+                    const char *msg_to_send = "data error.";
+                    send(conn_fd, msg_to_send, strlen(msg_to_send), 0);
                 }
             }
         }
