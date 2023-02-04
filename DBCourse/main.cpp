@@ -12,6 +12,7 @@
 #include <sys/epoll.h>
 #include <memory.h>
 #include <fcntl.h>
+#include <vector>
 
 #include <iostream>
 #include "ContanceManager.h"
@@ -54,8 +55,28 @@ void reset_epolloneshot(int epoll_fd, int conn_fd)
     epoll_ctl(epoll_fd, EPOLL_CTL_MOD, conn_fd, &event);
 }
 
+// 使用字符分割
+void Stringsplit(const string &str, const char split, vector<string> &res)
+{
+    if (str == "")
+        return;
+    string strs = str;
+    size_t pos = strs.find(split);
+
+    // 若找不到内容则字符串搜索函数返回 npos
+    while (pos != strs.npos)
+    {
+        string temp = strs.substr(0, pos);
+        res.push_back(temp);
+        //去掉已分割的字符串,在剩下的字符串中进行分割
+        strs = strs.substr(pos + 1, strs.size());
+        pos = strs.find(split);
+    }
+}
+
 void *worker(fds *fds)
 {
+    ContactManager *cm = ContactManager::GetInstance("ContactDat.dat", "ResumeDat.dat");
     int conn_fd = fds->sock_fd;
     int epoll_fd = fds->epoll_fd;
     pthread_t pid = pthread_self();
@@ -89,11 +110,46 @@ void *worker(fds *fds)
         else
         {
             printf("[thread:%d] get messgae:%s", (int)pid, buf);
-            if (strcmp(buf, "Connect"))
+            vector<string> query_str;
+            Stringsplit(string(buf), '/', query_str);
+            if (query_str.size() > 0)
             {
-                const char *msg_to_send = "input fucntion.1.new 2.search";
-                send(conn_fd, msg_to_send, strlen(msg_to_send), 0);
-                std::cout << "send to client:" << msg_to_send << std::endl;
+                if ((strcmp(query_str[0].c_str(), "new") == 0) && (query_str.size() == 7))
+                {
+                    PersonInfoWithResume full_info;
+                    PersonInfo info;
+                    memcpy(info.name, query_str[1].c_str(), sizeof(query_str[1].c_str()));
+                    memcpy(info.phonenumber, query_str[4].c_str(), sizeof(query_str[4].c_str()));
+                    memcpy(info.email, query_str[5].c_str(), sizeof(query_str[5].c_str()));
+                    memcpy(full_info.resume, query_str[6].c_str(), sizeof(query_str[6].c_str()));
+                    info.age = atoi(query_str[2].c_str());
+                    info.gender = atoi(query_str[3].c_str());
+                    full_info.person_info = info;
+                    info.resume_length = strlen(full_info.resume);
+                    std::cout << "save to dat,resume size:" << info.resume_length << std::endl;
+                    cm->SaveData(full_info);
+                    const char *msg_to_send = "new ok.";
+                    send(conn_fd, msg_to_send, strlen(msg_to_send), 0);
+                }
+                else if ((strcmp(query_str[0].c_str(), "search") == 0) && (query_str.size() == 4))
+                {
+                    string in_name = query_str[1];
+                    string in_phonenum = query_str[2];
+                    string in_email = query_str[3];
+                    std::cout << "search name:" << in_name << ",phonenumber:" << in_phonenum << ",email:" << in_email << ",data_size:" << cm->GetDataSize() << std::endl;
+                    list<PersonInfoWithResume> results = cm->SearchFromDat(in_name.c_str(), in_phonenum.c_str(), in_email.c_str(), true);
+                    for (auto iter = results.begin(); iter != results.end(); iter++)
+                    {
+                        std::cout << "name:" << iter->person_info.name << " "
+                                  << "age:" << iter->person_info.age << " "
+                                  << "phonenumber:" << iter->person_info.phonenumber << " "
+                                  << "email:" << iter->person_info.email << " "
+                                  << "resume:" << iter->resume << std::endl;
+
+                        const char *msg_to_send = "search ok.";
+                        send(conn_fd, msg_to_send, strlen(msg_to_send), 0);
+                    }
+                }
             }
         }
     }
@@ -156,6 +212,9 @@ int main()
                 int conn_fd = accept(listen_fd, (sockaddr *)&client_addr, &len);
                 add_fd_into_epoll_fds(epoll_fd, conn_fd, true);
                 printf("client connect\n");
+                const char *msg_to_send = "input fucntion.1.new/<name>/<age>/<gender>/<phonenumber>/<email>/<resume>/ 2.search/<name>/<phonenumber>/<email>/";
+                send(conn_fd, msg_to_send, strlen(msg_to_send), 0);
+                std::cout << "send to client:" << msg_to_send << std::endl;
             }
             else if (events[i].events & EPOLLIN)
             {
@@ -179,70 +238,4 @@ int main()
     }
     close(listen_fd);
     return 0;
-}
-
-int _main()
-{
-    ContactManager cm("ContactDat.dat", "ResumeDat.dat");
-    while (true)
-    {
-        std::cout << "input function:" << std::endl;
-        std::cout << "1.new" << std::endl;
-        std::cout << "2.search" << std::endl;
-        int func_type;
-        std::cin >> func_type;
-        switch (func_type)
-        {
-        case 1:
-        {
-            PersonInfoWithResume full_info;
-            PersonInfo info;
-            std::cout << "name:";
-            std::cin >> info.name;
-            std::cout << "age:";
-            std::cin >> info.age;
-            std::cout << "gender:";
-            std::cin >> info.gender;
-            std::cout << "phonenumber:";
-            std::cin >> info.phonenumber;
-            std::cout << "email:";
-            std::cin >> info.email;
-            std::cout << "resume:";
-            std::cin >> full_info.resume;
-            std::cout << "save to dat" << std::endl;
-            full_info.person_info = info;
-            info.resume_length = strlen(full_info.resume);
-            std::cout << "save to dat,resume size:" << info.resume_length << std::endl;
-            cm.SaveData(full_info);
-        }
-        break;
-        case 2:
-        {
-            std::cout << "search name:";
-            string in_name;
-            std::cin >> in_name;
-
-            std::cout << "search phone number:";
-            string in_phonenum;
-            std::cin >> in_phonenum;
-
-            std::cout << "search email:";
-            string in_email;
-            std::cin >> in_email;
-
-            list<PersonInfoWithResume> results = cm.SearchFromDat(in_name.c_str(), in_phonenum.c_str(), in_email.c_str(), true);
-            for (auto iter = results.begin(); iter != results.end(); iter++)
-            {
-                std::cout << "name:" << iter->person_info.name << " "
-                          << "age:" << iter->person_info.age << " "
-                          << "phonenumber:" << iter->person_info.phonenumber << " "
-                          << "email:" << iter->person_info.email << " "
-                          << "resume:" << iter->resume << std::endl;
-            }
-        }
-        break;
-        default:
-            break;
-        }
-    }
 }

@@ -57,8 +57,6 @@ int main()
     ret = pipe(std_pipefd);
     assert(ret != -1);
     addepollfd(epoll_fd, STDIN_FILENO);
-    printf("call server success.you can type [Connect] to connect with service\n");
-    char buf[BUFFER_SIZE];
     while (true)
     {
         ret = epoll_wait(epoll_fd, events, MAX_EVENT_NUM, -1);
@@ -70,22 +68,19 @@ int main()
         for (int i = 0; i < ret; i++)
         {
             int sock_fd = events[i].data.fd;
-            if (sock_fd == conn_fd && (events[i].events & EPOLLIN))
+            if ((sock_fd == conn_fd) && (events[i].events & EPOLLIN))
             { // data
-                memset(buf, '\0', BUFFER_SIZE);
-                printf("receive data from server");
+                char buf[BUFFER_SIZE] = {0};
                 int len = recv(sock_fd, buf, BUFFER_SIZE - 1, 0);
-                printf("receive [%d]data from server:", len);
                 if (len > 0)
                 {
-                    printf("%s", buf);
+                    std::cout << buf << std::endl;
                 }
                 else if (len < 0)
                 {
-                    printf("%d", len);
                     if (errno == EAGAIN || errno == EWOULDBLOCK)
                     {
-                        printf("read later.\n");
+                        std::cout << "read later." << std::endl;
                         break;
                     }
                 }
@@ -94,7 +89,7 @@ int main()
                     close(sock_fd);
                 }
             }
-            else if (sock_fd == STDIN_FILENO && (events[i].events & EPOLLIN))
+            else if ((sock_fd == STDIN_FILENO) && (events[i].events & EPOLLIN))
             {
                 splice(STDIN_FILENO, NULL, std_pipefd[1], NULL, PIPE_BUFFER_SIZE, SPLICE_F_MORE | SPLICE_F_MOVE); // get stand input
                 splice(std_pipefd[0], NULL, conn_fd, NULL, PIPE_BUFFER_SIZE, SPLICE_F_MORE | SPLICE_F_MOVE);

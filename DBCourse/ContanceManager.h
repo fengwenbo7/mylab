@@ -7,32 +7,29 @@
 #include <fstream>
 #include <list>
 #include <algorithm>
+#include <iostream>
 using namespace std;
 
 #define RESUME_FILE_SIZE
 
 class ContactManager
 {
+private:
+    static ContactManager *instance_;
+
 public:
-    ContactManager(std::string dat_file, std::string resume_file_path) : dat_file_path_(dat_file), resume_file_path_(resume_file_path)
+    static ContactManager *GetInstance(std::string dat_file, std::string resume_file_path)
     {
-        file_off_ = 0;
-        data_size_ = 0;
-        resume_file_off_ = 0;
-        fstream fs(dat_file, ios::out);
-        if (fs)
+        if (nullptr == instance_)
         {
-            fs.close();
+            instance_ = new ContactManager(dat_file, resume_file_path);
         }
-        fstream resume_fs(resume_file_path, ios::out);
-        if (resume_fs)
-        {
-            resume_fs.close();
-        }
+        return instance_;
     }
 
-    ~ContactManager()
+    int GetDataSize()
     {
+        return data_size_;
     }
 
     void SaveData(PersonInfoWithResume info)
@@ -90,24 +87,30 @@ public:
         transform(input_name.begin(), input_name.end(), input_name.begin(), ::tolower);
         transform(input_phonenum.begin(), input_phonenum.end(), input_phonenum.begin(), ::tolower);
         transform(input_email.begin(), input_email.end(), input_email.begin(), ::tolower);
+        // std::cout << "search name:" << input_name << ",phonenumber:" << input_phonenum << ",email:" << input_email << ",size:" << data_size_ << std::endl;
         for (size_t i = 0; i < data_size_; i++)
         {
             string tmp_name(p_info[i].name);
             string tmp_phonenum(p_info[i].phonenumber);
             string tmp_email(p_info[i].email);
+            // std::cout << "search each data-----name:" << tmp_name << ",phonenumber:" << tmp_phonenum << ",email:" << tmp_email << std::endl;
             transform(tmp_name.begin(), tmp_name.end(), tmp_name.begin(), ::tolower);
             transform(tmp_phonenum.begin(), tmp_phonenum.end(), tmp_phonenum.begin(), ::tolower);
             transform(tmp_email.begin(), tmp_email.end(), tmp_email.begin(), ::tolower);
             if (name != nullptr && strcmp(tmp_name.c_str(), input_name.c_str()) != 0)
             {
+                std::cout << "continue name" << std::endl;
                 continue;
             }
             if (phonenum != nullptr && strcmp(tmp_phonenum.c_str(), input_phonenum.c_str()) != 0)
             {
+                std::cout << "continue phonenumber" << std::endl;
                 continue;
             }
             if (email != nullptr && strcmp(tmp_email.c_str(), input_email.c_str()) != 0)
             {
+                std::cout << "continue email."
+                          << "email size:" << tmp_email.size() << "," << input_email.size() << std::endl;
                 continue;
             }
             if (show_resume)
@@ -137,6 +140,24 @@ public:
     }
 
 private:
+    ContactManager(std::string dat_file, std::string resume_file_path) : dat_file_path_(dat_file), resume_file_path_(resume_file_path)
+    {
+        file_off_ = 0;
+        data_size_ = 0;
+        resume_file_off_ = 0;
+        fstream fs(dat_file, ios::out);
+        if (fs)
+        {
+            fs.close();
+        }
+        fstream resume_fs(resume_file_path, ios::out);
+        if (resume_fs)
+        {
+            resume_fs.close();
+        }
+    }
+
+private:
     const std::string dat_file_path_;
     const std::string resume_file_path_;
     int file_off_;
@@ -144,4 +165,5 @@ private:
     int data_size_;
 };
 
+ContactManager *ContactManager::instance_ = NULL;
 #endif
