@@ -145,8 +145,13 @@ void *worker(fds *fds)
                                   << "phonenumber:" << iter->person_info.phonenumber << " "
                                   << "email:" << iter->person_info.email << " "
                                   << "resume:" << iter->resume << std::endl;
-
-                        const char *msg_to_send = "search ok.";
+                        char msg_to_send[512];
+                        sprintf(msg_to_send, "[search ok]name:%s,age:%d,phone:%s,email:%s,resume:%s",
+                                iter->person_info.name,
+                                iter->person_info.age,
+                                iter->person_info.phonenumber,
+                                iter->person_info.email,
+                                iter->resume);
                         send(conn_fd, msg_to_send, strlen(msg_to_send), 0);
                     }
                 }

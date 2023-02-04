@@ -49,7 +49,6 @@ public:
         }
 
         memcpy(info.person_info.resume_file_name, resume_file_path_.c_str(), sizeof(resume_file_path_));
-        info.person_info.resume_length = strlen(info.resume);
         info.person_info.resume_start = resume_file_off_;
 
         dat_file_s.seekp(file_off_, ios::beg);
@@ -60,7 +59,7 @@ public:
         std::cout << (char *)info.person_info.name << "," << sizeof(info.person_info.name) << std::endl;
 
         resume_file_s.seekp(resume_file_off_, ios::beg);
-        resume_file_s.write((char *)info.resume, strlen(info.resume));
+        resume_file_s.write((char *)info.resume, info.person_info.resume_length);
         resume_file_off_ += strlen(info.resume);
         resume_file_s.close();
         std::cout << "save data to dat success,file_off:" << file_off_ << ",data_size:" << data_size_ << std::endl;
@@ -87,13 +86,13 @@ public:
         transform(input_name.begin(), input_name.end(), input_name.begin(), ::tolower);
         transform(input_phonenum.begin(), input_phonenum.end(), input_phonenum.begin(), ::tolower);
         transform(input_email.begin(), input_email.end(), input_email.begin(), ::tolower);
-        // std::cout << "search name:" << input_name << ",phonenumber:" << input_phonenum << ",email:" << input_email << ",size:" << data_size_ << std::endl;
+        std::cout << "search name:" << input_name << ",phonenumber:" << input_phonenum << ",email:" << input_email << ",size:" << data_size_ << std::endl;
         for (size_t i = 0; i < data_size_; i++)
         {
             string tmp_name(p_info[i].name);
             string tmp_phonenum(p_info[i].phonenumber);
             string tmp_email(p_info[i].email);
-            // std::cout << "search each data-----name:" << tmp_name << ",phonenumber:" << tmp_phonenum << ",email:" << tmp_email << std::endl;
+            std::cout << "search each data-----name:" << tmp_name << ",phonenumber:" << tmp_phonenum << ",email:" << tmp_email << std::endl;
             transform(tmp_name.begin(), tmp_name.end(), tmp_name.begin(), ::tolower);
             transform(tmp_phonenum.begin(), tmp_phonenum.end(), tmp_phonenum.begin(), ::tolower);
             transform(tmp_email.begin(), tmp_email.end(), tmp_email.begin(), ::tolower);
